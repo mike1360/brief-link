@@ -1,0 +1,71 @@
+Summary,Issue Type,Description,Acceptance Criteria,Story Points,Epic,Priority,Labels
+"As a user I can upload a PDF brief for processing",Story,"As a paralegal or litigation support specialist, I need to upload a multi-page PDF brief so the system can scan it for exhibit citations.","- Accept PDF files via drag-and-drop or file picker
+- Display file name and size after upload
+- Show error for non-PDF files
+- Allow clearing/replacing the uploaded file
+- Support files up to 50MB",3,Brief Link,High,"upload,brief,mvp"
+"As a user I can upload multiple exhibit files",Story,"As a paralegal, I need to upload exhibit files (PDFs, images, Word docs) and label them so they can be linked to citations in the brief.","- Accept multiple files at once via drag-and-drop or picker
+- Auto-detect exhibit label from filename (e.g., Exhibit_A.pdf -> Exhibit A)
+- Allow manual editing of exhibit labels
+- Display list of uploaded exhibits with file names
+- Support removing individual exhibits
+- Support PDF, DOCX, JPG, PNG, TIFF file types",5,Brief Link,High,"upload,exhibits,mvp"
+"As a user I can scan a brief for exhibit citations",Story,"As a paralegal, I need the system to automatically find all exhibit references in my uploaded brief so I know what needs to be linked.","- Detect 'Exhibit A/1' format citations
+- Detect 'Ex. A/1' abbreviated citations
+- Detect 'Exh. A/1' abbreviated citations
+- Detect compound references (Exhibits A and B)
+- Detect citations with page references (Ex. A at 12)
+- Detect citations with Bates number references
+- Show total count of citations found
+- Show count broken down by linked vs unlinked",8,Brief Link,High,"parsing,citations,mvp"
+"As a user I can see citations auto-mapped to exhibits",Story,"As a paralegal, I want the system to automatically match detected citations to my uploaded exhibits by label so I don't have to manually link each one.","- Auto-map citations where exhibit label matches (Exhibit A -> file labeled Exhibit A)
+- Show count of auto-mapped vs unlinked citations
+- Display matched exhibit name next to each linked citation
+- Handle case-insensitive matching
+- Handle label variations (Exhibit A, Ex. A, Exh. A all map to same exhibit)",5,Brief Link,High,"auto-map,citations,mvp"
+"As a user I can manually map unlinked citations to exhibits",Story,"As a paralegal, I need to manually assign exhibits to citations that weren't auto-matched, and override incorrect auto-mappings.","- Show dropdown of available exhibits for each citation
+- Allow clearing a mapping (unlinking)
+- Show context snippet around each citation for verification
+- Show page number where citation appears
+- Changes reflected immediately in preview",3,Brief Link,High,"manual-map,citations,mvp"
+"As a user I can preview the brief with highlighted citations",Story,"As a paralegal, I need to see a preview of the brief text with citations highlighted and color-coded so I can verify the linking before generating output.","- Display full brief text in readable format
+- Highlight linked citations in green
+- Highlight unlinked citations in amber/warning color
+- Clicking a linked citation opens the exhibit in a new tab
+- Show legend for highlight colors",3,Brief Link,Medium,"preview,mvp"
+"As a user I can download the linked brief as HTML",Story,"As a paralegal, I need to download the brief with embedded hyperlinks so I can share it with attorneys and clients.","- Generate HTML file with clickable exhibit links
+- Preserve brief text formatting
+- Links open exhibit files in new tab
+- Include header showing file name and link count
+- Professional styling suitable for client delivery
+- Download triggers automatically with correct filename",5,Brief Link,High,"download,output,mvp"
+"As a user I can download the linked brief as PDF",Story,"As a paralegal, I want to download a PDF version of the linked brief with embedded URI annotations pointing to exhibits.","- Generate modified PDF with link annotations at citation locations
+- Preserve original PDF formatting and layout
+- Links are clickable in standard PDF viewers
+- Fallback gracefully if PDF generation fails (offer HTML instead)",8,Brief Link,Medium,"download,pdf,mvp"
+"As a user I can start over and process another brief",Story,"As a paralegal, I need to reset the tool and start fresh so I can process multiple briefs in succession.","- Clear all uploaded files and state
+- Return to upload step
+- Free memory (revoke object URLs)
+- No data persists between sessions",2,Brief Link,Low,"reset,ux"
+"As a user I see a clear workflow with step indicators",Story,"As a user, I want to see where I am in the process so I know what steps are remaining.","- Show 4-step indicator: Upload > Process > Review > Download
+- Highlight current step
+- Show completed steps differently from upcoming steps
+- Responsive on mobile",2,Brief Link,Medium,"ux,navigation"
+"As a user I can toggle dark mode",Story,"As a user who works long hours, I want a dark mode option to reduce eye strain.","- Toggle between light and dark themes
+- Apply Veritext brand colors in both modes
+- Persist preference (optional for POC)",1,Brief Link,Low,"ux,theme"
+"As an admin I can see processing statistics",Story,"As a Veritext product manager, I want to see how many citations were found and linked so I can validate the tool's accuracy.","- Show total citations found
+- Show linked count and percentage
+- Show unlinked count
+- Display stats prominently in review step",2,Brief Link,Medium,"analytics,review"
+"As a user I get helpful error messages when something goes wrong",Story,"As a paralegal, I need clear error messages if something fails so I know what to do next.","- Show error banner with readable message
+- Handle PDF parsing failures gracefully
+- Handle empty/corrupt PDF files
+- Don't lose uploaded data on recoverable errors",3,Brief Link,Medium,"errors,ux"
+"Performance: Brief processing completes in under 10 seconds",Story,"As a user, I need the citation scanning to complete quickly so I'm not waiting around.","- Process a 30-page brief in under 10 seconds
+- Show loading indicator during processing
+- No browser freezing during processing",3,Brief Link,Medium,"performance,non-functional"
+"Security: Uploaded files are processed client-side only",Story,"As a law firm user handling confidential documents, I need assurance that brief and exhibit files never leave my browser.","- All PDF parsing happens in browser (no server upload)
+- All linking happens client-side
+- No data sent to any external API
+- Document content never logged or stored",2,Brief Link,High,"security,compliance,non-functional"

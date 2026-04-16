@@ -1,0 +1,22 @@
+============================================================
+EXHIBIT G
+============================================================
+
+EXPERT REPORT OF DR. SARAH CHEN, CPA, CFF
+
+Prepared for: Walker, Pratt & Associates LLP
+Date: November 15, 2024
+
+[Pages 15-22: Analysis of Channel Stuffing Practices]
+Meridian engaged in systematic channel stuffing by recording revenue on
+transactions that had not been finalized. Key instances include:
+- Apex Technologies: $3.2M in premature revenue recognition
+- Bridgewater Systems: $2.8M in accelerated bookings
+- Cascade Networks: $2.3M in bill-and-hold arrangements
+
+[Pages 23-27: Revenue Overstatement Analysis]
+Total Revenue Overstatement: $8,300,000
+Reported Revenue:  $52,800,000
+Actual Revenue:    $44,500,000
+
+Corrected EBITDA:  $12,100,000 (vs. reported $18,400,000)

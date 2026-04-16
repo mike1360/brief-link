@@ -1,0 +1,94 @@
+UNITED STATES DISTRICT COURT
+SOUTHERN DISTRICT OF NEW YORK
+
+────────────────────────────────────────
+
+GREENFIELD CAPITAL PARTNERS, LLC,
+
+                    Plaintiff,
+
+        v.                                          Case No. 24-CV-08172 (LAK)
+
+MERIDIAN HOLDINGS, INC., and
+DAVID R. THORNTON, individually,
+
+                    Defendants.
+
+────────────────────────────────────────
+
+PLAINTIFF'S MEMORANDUM OF LAW IN SUPPORT OF
+MOTION FOR SUMMARY JUDGMENT
+
+────────────────────────────────────────
+
+PRELIMINARY STATEMENT
+
+    Plaintiff Greenfield Capital Partners, LLC ("Greenfield" or "Plaintiff") respectfully submits this memorandum of law in support of its motion for summary judgment pursuant to Federal Rule of Civil Procedure 56. As demonstrated below, the undisputed material facts establish that Defendants Meridian Holdings, Inc. ("Meridian") and David R. Thornton ("Thornton") (collectively, "Defendants") breached the Stock Purchase Agreement dated March 15, 2023 (the "SPA"), attached hereto as Exhibit A, and the related Indemnification Agreement, attached hereto as Exhibit B.
+
+    The evidence is overwhelming and uncontroverted. Defendants' own documents — including internal emails produced in discovery (Exhibit C) and the audited financial statements for fiscal year 2022 (Exhibit D) — conclusively demonstrate that Defendants knowingly misrepresented the financial condition of Meridian at the time of the transaction.
+
+STATEMENT OF UNDISPUTED FACTS
+
+    1. On March 15, 2023, Greenfield and Meridian executed the SPA (Ex. A) pursuant to which Greenfield agreed to purchase 100% of the outstanding shares of Meridian for $47.5 million.
+
+    2. Section 4.5 of the SPA (Ex. A at 12-14) contains representations and warranties regarding Meridian's financial statements, including that such statements were prepared in accordance with GAAP and fairly present the financial condition of the company.
+
+    3. Concurrently with the SPA, the parties executed the Indemnification Agreement (Ex. B), pursuant to which Thornton, as the sole shareholder of Meridian, personally guaranteed the accuracy of the representations and warranties set forth in the SPA.
+
+    4. Prior to closing, Greenfield retained the accounting firm of Baker & Whitfield LLP to conduct due diligence. Baker & Whitfield's due diligence report, dated February 28, 2023 (Exhibit E), identified certain discrepancies in Meridian's accounts receivable but concluded that these discrepancies were "within an acceptable range."
+
+    5. The closing of the transaction occurred on April 30, 2023. At closing, Defendants delivered a Closing Certificate (Exhibit F) reaffirming all representations and warranties in the SPA.
+
+    6. In July 2023, Greenfield's post-acquisition review uncovered significant irregularities in Meridian's financial records. Specifically, Greenfield discovered that Meridian had been engaging in "channel stuffing" — a practice of accelerating revenue recognition by recording sales that had not yet been finalized. See Expert Report of Dr. Sarah Chen, CPA (Exhibit G) at 15-22.
+
+    7. Dr. Chen's analysis reveals that Meridian overstated its revenue by approximately $8.3 million for fiscal year 2022 (Exh. G at 23-27). The corrected financial statements, prepared by Dr. Chen and attached as Exhibit H, demonstrate that Meridian's actual EBITDA for the period was $12.1 million — not the $18.4 million represented in the original financial statements (Ex. D).
+
+    8. Internal emails between Thornton and Meridian's former CFO, Rachel Morrison, produced in discovery (Ex. C), confirm that Defendants were aware of these accounting irregularities. In a January 10, 2023 email, Morrison wrote to Thornton: "The Q4 numbers are aggressive. If the auditors dig into the Apex and Bridgewater receivables, we could have a problem." Thornton responded: "Keep it tight. The deal needs to close." (Ex. C at VTX-000342-43.)
+
+    9. On September 15, 2023, Greenfield sent a formal Notice of Claim to Defendants pursuant to Section 8.2 of the SPA (Exhibit A at 28-30), demanding indemnification in the amount of $15.2 million. A copy of the Notice of Claim is attached as Exhibit I.
+
+    10. Defendants responded on October 1, 2023, denying all liability. See Defendants' Response Letter (Exhibit J).
+
+ARGUMENT
+
+I. DEFENDANTS BREACHED THE REPRESENTATIONS AND WARRANTIES IN THE SPA
+
+    The undisputed evidence demonstrates that Defendants breached multiple representations and warranties contained in Section 4.5 of the SPA (Exhibit A). Specifically, the financial statements provided by Defendants overstated Meridian's revenue by $8.3 million (Exhibit G at 23-27; Exhibit H), and Defendants knew of these misrepresentations at the time they were made (Ex. C at VTX-000342-43).
+
+    Under New York law, a breach of a contractual representation is established where the representation was false when made. See Galli v. Metz, 973 F.2d 145, 151 (2d Cir. 1992). Here, the falsity of Defendants' representations is beyond dispute. The expert analysis (Exhibits G and H) and Defendants' own internal communications (Exhibit C) leave no genuine issue of material fact.
+
+II. THORNTON IS PERSONALLY LIABLE UNDER THE INDEMNIFICATION AGREEMENT
+
+    Pursuant to the Indemnification Agreement (Exhibit B), Thornton personally guaranteed the accuracy of the representations and warranties in the SPA. Section 2.1 of the Indemnification Agreement (Ex. B at 3-4) provides that the Indemnitor shall "hold harmless and indemnify [Greenfield] from and against any and all Losses arising from any breach of any representation, warranty, or covenant."
+
+    Thornton's personal liability is further supported by the Closing Certificate he executed on April 30, 2023 (Exhibit F), in which he certified that all representations and warranties remained true and correct as of the closing date.
+
+III. GREENFIELD IS ENTITLED TO DAMAGES OF $15.2 MILLION
+
+    Greenfield's damages expert, Dr. James Whitmore, has calculated Greenfield's total losses at $15.2 million. See Expert Report of Dr. James Whitmore (Exhibit K) at 8-14. This figure accounts for (a) the overpayment attributable to the inflated financial statements ($8.3 million), (b) lost business opportunities resulting from the misrepresented financial condition ($4.1 million), and (c) costs of investigation and remediation ($2.8 million). See Ex. K at 14; see also Summary of Damages Calculation (Exhibit L).
+
+    Each category of damages is supported by documentary evidence and expert testimony. The investigation costs are documented in invoices from Baker & Whitfield LLP and Greenfield's internal cost records (Exhibits M and N, respectively).
+
+CONCLUSION
+
+    For the foregoing reasons, Plaintiff Greenfield Capital Partners, LLC respectfully requests that this Court grant its motion for summary judgment in its entirety, and award damages in the amount of $15.2 million, plus pre-judgment interest, costs, and attorneys' fees as provided in Section 9.3 of the SPA (Ex. A at 35).
+
+Dated: New York, New York
+       January 15, 2025
+
+                                        Respectfully submitted,
+
+                                        WALKER, PRATT & ASSOCIATES LLP
+
+                                        By: ________________________________
+                                            Jonathan M. Walker
+                                            Amanda L. Pratt
+                                            85 Broad Street, 28th Floor
+                                            New York, NY 10004
+                                            Tel: (212) 555-0147
+                                            Fax: (212) 555-0148
+                                            jwalker@walkerpratt.com
+                                            apratt@walkerpratt.com
+
+                                            Attorneys for Plaintiff
+                                            Greenfield Capital Partners, LLC

@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Theme Variables ─────────────────────────────────────────────────── */
+:root {
+  --bg-page:    #EEF4FA;
+  --bg-card:    #FFFFFF;
+  --bg-card2:   #F5F9FD;
+  --bg-input:   #F2F7FC;
+  --border:     #D0DDE9;
+  --border-2:   #E4EEF6;
+  --text:       #0F2233;
+  --text-2:     #3A5568;
+  --text-3:     #6688A0;
+  --text-inv:   #FFFFFF;
+  --shadow:     0 1px 3px 0 rgb(17 54 87 / 0.08), 0 1px 2px -1px rgb(17 54 87 / 0.06);
+  --shadow-lg:  0 4px 16px 0 rgb(17 54 87 / 0.12);
+  --accent:     #1A4A73;
+  --accent-h:   #205A8A;
+  --success:    #16A34A;
+  --warning:    #D97706;
+  --danger:     #DC2626;
+}
+
+.dark {
+  --bg-page:    #0A1E30;
+  --bg-card:    #0F2D47;
+  --bg-card2:   #0D2640;
+  --bg-input:   #0B2236;
+  --border:     #1A3D5C;
+  --border-2:   #163351;
+  --text:       #E4EEF8;
+  --text-2:     #AABFD4;
+  --text-3:     #7EA3BC;
+  --text-inv:   #FFFFFF;
+  --shadow:     0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-lg:  0 4px 16px 0 rgb(0 0 0 / 0.4);
+  --accent:     #3B82C4;
+  --accent-h:   #4A96DA;
+  --success:    #22C55E;
+  --warning:    #F59E0B;
+  --danger:     #EF4444;
+}
+
+@layer base {
+  html { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text);
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+}
+
+@layer components {
+  /* Layout */
+  .page-bg    { background-color: var(--bg-page); }
+  .card-bg    { background-color: var(--bg-card); }
+  .card-bg2   { background-color: var(--bg-card2); }
+  .input-bg   { background-color: var(--bg-input); }
+  .border-th  { border-color: var(--border); }
+  .border-th2 { border-color: var(--border-2); }
+  .text-th    { color: var(--text); }
+  .text-th2   { color: var(--text-2); }
+  .text-th3   { color: var(--text-3); }
+
+  .card {
+    background-color: var(--bg-card);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-2);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors;
+    background-color: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background-color: var(--accent-h); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    @apply flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors;
+    background-color: var(--bg-card);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background-color: var(--bg-card2); }
+
+  .btn-danger {
+    @apply flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors;
+    background-color: var(--danger);
+    color: white;
+  }
+  .btn-danger:hover { opacity: 0.9; }
+
+  /* Citation highlights */
+  .citation-highlight {
+    background-color: rgba(26, 74, 115, 0.12);
+    border-bottom: 2px solid var(--accent);
+    padding: 1px 2px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .citation-highlight:hover {
+    background-color: rgba(26, 74, 115, 0.22);
+  }
+  .citation-linked {
+    background-color: rgba(22, 163, 74, 0.12);
+    border-bottom-color: var(--success);
+  }
+  .citation-linked:hover {
+    background-color: rgba(22, 163, 74, 0.22);
+  }
+  .citation-unlinked {
+    background-color: rgba(217, 119, 6, 0.12);
+    border-bottom-color: var(--warning);
+  }
+}

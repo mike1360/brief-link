@@ -62,53 +62,121 @@ export async function extractTextFromPdf(file: File): Promise<PageText[]> {
 
 /**
  * Find the PDF-coordinate bounding box for a citation on a given page.
- * Searches through text items to find the ones that contain the citation text.
+ *
+ * Two-pass strategy:
+ *   1) Try to locate the citation fully inside a single text item, narrowing the
+ *      rect to the substring's approximate x-range using per-character width.
+ *      pdf.js often returns an entire line or paragraph as one item, so without
+ *      this narrowing the link would cover the whole block of text.
+ *   2) If not found within any single item, fall back to a multi-item span.
+ *
+ * `occurrenceIndex` selects the Nth match of the citation text on the page so
+ * repeated labels (e.g. "Ex. 5" appearing twice) link to distinct positions.
  */
 function findCitationRect(
   citation: Citation,
   page: PageText,
+  occurrenceIndex: number = 0,
 ): { x: number; y: number; width: number; height: number } | null {
   const target = citation.text.toLowerCase()
   const items = page.items
 
-  // Build a running text from items to find where the citation falls
-  let runningText = ''
-  for (let i = 0; i < items.length; i++) {
-    const prevLen = runningText.length
-    runningText += items[i].str + ' '
-
-    const searchText = runningText.toLowerCase()
-    const idx = searchText.indexOf(target)
-
-    if (idx !== -1) {
-      // Found the citation — figure out which items span it
-      // Walk backward to find the starting item
-      let charCount = 0
-      let startItemIdx = i
-      for (let j = 0; j <= i; j++) {
-        const itemEnd = charCount + items[j].str.length + 1 // +1 for space
-        if (charCount <= idx && idx < itemEnd) {
-          startItemIdx = j
-          break
+  // Pass 1: substring inside a single item
+  let occurrencesSeen = 0
+  for (const item of items) {
+    const itemText = item.str.toLowerCase()
+    let searchStart = 0
+    let idx = itemText.indexOf(target, searchStart)
+    while (idx !== -1) {
+      if (occurrencesSeen === occurrenceIndex) {
+        const charWidth = item.str.length > 0 ? item.width / item.str.length : 0
+        const x = item.x + idx * charWidth
+        const width = target.length * charWidth
+        return {
+          x: x - 1,
+          y: item.y - 2,
+          width: width + 2,
+          height: item.height + 4,
         }
-        charCount += items[j].str.length + 1
       }
+      occurrencesSeen++
+      searchStart = idx + target.length
+      idx = itemText.indexOf(target, searchStart)
+    }
+  }
 
-      const startItem = items[startItemIdx]
-      const endItem = items[i]
+  // Pass 2: citation spans multiple items — walk running text and narrow via char widths
+  let runningText = ''
+  let spanOccurrences = 0
+  for (let i = 0; i < items.length; i++) {
+    runningText += items[i].str + ' '
+    const searchText = runningText.toLowerCase()
 
-      // Bounding box spanning from start item to end item
-      const x = Math.min(startItem.x, endItem.x)
-      const y = Math.min(startItem.y, endItem.y)
-      const right = Math.max(startItem.x + startItem.width, endItem.x + endItem.width)
-      const height = Math.max(startItem.height, endItem.height)
+    let from = 0
+    let idx = searchText.indexOf(target, from)
+    while (idx !== -1) {
+      // Only count matches that end within this newly-appended item, to avoid
+      // re-counting the same span across iterations.
+      const matchEnd = idx + target.length
+      const itemStartInRunning = runningText.length - items[i].str.length - 1
+      if (matchEnd > itemStartInRunning) {
+        if (spanOccurrences === occurrenceIndex) {
+          // Find start and end items by char offset
+          let charCount = 0
+          let startItemIdx = 0
+          let startCharInItem = 0
+          for (let j = 0; j < items.length; j++) {
+            const itemEnd = charCount + items[j].str.length + 1
+            if (charCount <= idx && idx < itemEnd) {
+              startItemIdx = j
+              startCharInItem = idx - charCount
+              break
+            }
+            charCount += items[j].str.length + 1
+          }
 
-      return {
-        x: x - 1,
-        y: y - 2,
-        width: right - x + 2,
-        height: height + 4,
+          const startItem = items[startItemIdx]
+          const endItem = items[i]
+          const startCharWidth =
+            startItem.str.length > 0 ? startItem.width / startItem.str.length : 0
+          const startX = startItem.x + startCharInItem * startCharWidth
+
+          // Same-line span: narrow horizontally; cross-line: fall back to start item only
+          const sameLine = Math.abs(startItem.y - endItem.y) < 2
+          if (sameLine) {
+            const endCharCount = (() => {
+              let c = 0
+              for (let j = 0; j < startItemIdx; j++) c += items[j].str.length + 1
+              return c
+            })()
+            const relEnd = matchEnd - endCharCount
+            const endCharWidth =
+              endItem.str.length > 0 ? endItem.width / endItem.str.length : 0
+            // Use startItem width as approximation if match is fully within the start item
+            const right = startItem.x + relEnd * startCharWidth
+            const endRight = endItem.x + Math.min(relEnd, endItem.str.length) * endCharWidth
+            const finalRight = Math.max(right, endRight, startX + 10)
+            return {
+              x: startX - 1,
+              y: Math.min(startItem.y, endItem.y) - 2,
+              width: finalRight - startX + 2,
+              height: Math.max(startItem.height, endItem.height) + 4,
+            }
+          } else {
+            // Cross-line fallback: just highlight within start item
+            const width = target.length * startCharWidth
+            return {
+              x: startX - 1,
+              y: startItem.y - 2,
+              width: width + 2,
+              height: startItem.height + 4,
+            }
+          }
+        }
+        spanOccurrences++
       }
+      from = idx + target.length
+      idx = searchText.indexOf(target, from)
     }
   }
 
@@ -317,6 +385,18 @@ export async function buildLinkedPdf(
 
   const briefPages = allPages.slice(0, briefPageCount)
 
+  // Compute per-page occurrence index for each citation so repeated citation
+  // text (e.g. "Ex. 5" twice on the same page) maps to distinct positions.
+  const sortedCitations = [...citations].sort((a, b) => a.startIndex - b.startIndex)
+  const occurrenceByCitation = new Map<string, number>()
+  const perPageCounters = new Map<string, number>()
+  for (const cit of sortedCitations) {
+    const key = `${cit.pageNumber}::${cit.text.toLowerCase()}`
+    const next = perPageCounters.get(key) ?? 0
+    occurrenceByCitation.set(cit.id, next)
+    perPageCounters.set(key, next + 1)
+  }
+
   for (const cit of citations) {
     if (!cit.exhibitId) continue
     const targetPageIdx = exhibitPageMap.get(cit.exhibitId)
@@ -333,7 +413,8 @@ export async function buildLinkedPdf(
     const targetPageRef = allPages[targetPageIdx].ref
 
     // Try to find exact position from text items
-    const rect = findCitationRect(cit, pageData)
+    const occurrenceIdx = occurrenceByCitation.get(cit.id) ?? 0
+    const rect = findCitationRect(cit, pageData, occurrenceIdx)
     const { height: pageHeight } = briefPage.getSize()
 
     let linkRect: [number, number, number, number]

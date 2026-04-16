@@ -7,7 +7,7 @@ beforeEach(() => {
 })
 
 function makePages(text: string): PageText[] {
-  return [{ pageNumber: 1, text, startOffset: 0 }]
+  return [{ pageNumber: 1, text, startOffset: 0, items: [] }]
 }
 
 describe('normalizeLabel', () => {
@@ -75,8 +75,8 @@ describe('parseCitations', () => {
 
   it('assigns correct page numbers across pages', () => {
     const pages: PageText[] = [
-      { pageNumber: 1, text: 'Page one has Exhibit A. ', startOffset: 0 },
-      { pageNumber: 2, text: 'Page two has Exhibit B. ', startOffset: 24 },
+      { pageNumber: 1, text: 'Page one has Exhibit A. ', startOffset: 0, items: [] },
+      { pageNumber: 2, text: 'Page two has Exhibit B. ', startOffset: 24, items: [] },
     ]
     const result = parseCitations(pages)
     expect(result.citations).toHaveLength(2)

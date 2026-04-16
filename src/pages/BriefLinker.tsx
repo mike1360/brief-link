@@ -103,22 +103,16 @@ export default function BriefLinker() {
   const handleGenerateOutput = useCallback(async () => {
     if (!briefFile) return
     setProcessing(true)
+    setError(null)
 
     try {
       const exhibitMap = new Map(exhibits.map(e => [e.id, e]))
-
-      // Try to build linked PDF
-      try {
-        const pdfBytes = await buildLinkedPdf(briefFile, citations, exhibitMap, pages)
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' })
-        setLinkedPdfUrl(URL.createObjectURL(blob))
-      } catch {
-        // PDF linking is best-effort; HTML is the primary output
-      }
-
+      const pdfBytes = await buildLinkedPdf(briefFile, citations, exhibitMap, pages)
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+      setLinkedPdfUrl(URL.createObjectURL(blob))
       setStep('download')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate output')
+      setError(err instanceof Error ? err.message : 'Failed to generate linked PDF')
     } finally {
       setProcessing(false)
     }
@@ -251,7 +245,6 @@ export default function BriefLinker() {
           <div className="max-w-md mx-auto space-y-4">
             <DownloadPanel
               linkedPdfUrl={linkedPdfUrl}
-              fullText={fullText}
               citations={citations}
               exhibits={exhibits}
               briefFileName={briefFile?.name || 'brief'}

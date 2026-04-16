@@ -7,6 +7,16 @@ export interface ExhibitFile {
   pageCount?: number
 }
 
+/** A text item with its position on the PDF page */
+export interface TextItem {
+  str: string
+  x: number              // Left edge in PDF points
+  y: number              // Bottom edge in PDF points
+  width: number
+  height: number
+  pageNumber: number
+}
+
 /** A citation found in the brief text */
 export interface Citation {
   id: string
@@ -23,6 +33,7 @@ export interface PageText {
   pageNumber: number
   text: string
   startOffset: number    // Global character offset where this page starts
+  items: TextItem[]      // Individual text items with positions
 }
 
 /** Result of parsing a brief */

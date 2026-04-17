@@ -15,8 +15,14 @@ const CITATION_PATTERNS = [
   /\bEx\.\s*"?([A-Z]{1,3}(?:-\d+)?|\d{1,4})"?\b/gi,
   // "Exh. A", "Exh. 1"
   /\bExh\.\s*"?([A-Z]{1,3}(?:-\d+)?|\d{1,4})"?\b/gi,
+  // "Attachment A", "Attachment 1" (federal complaints — FTC v. Amazon pattern)
+  /\bAttachment\s+"?([A-Z]{1,3}(?:-\d+)?|\d{1,4})"?\b/gi,
+  // "Att. A", "Att. 1"
+  /\bAtt\.\s*"?([A-Z]{1,3}(?:-\d+)?|\d{1,4})"?\b/gi,
   // "Exhibits A and B" / "Exhibits A, B, and C" — captures individual refs from compound
   /\bExhibits\s+([A-Z]{1,3}(?:-\d+)?|\d{1,4})(?:\s*(?:,|and|&)\s+([A-Z]{1,3}(?:-\d+)?|\d{1,4}))+\b/gi,
+  // "Attachments A and B" / "Attachments A, B, and C"
+  /\bAttachments\s+([A-Z]{1,3}(?:-\d+)?|\d{1,4})(?:\s*(?:,|and|&)\s+([A-Z]{1,3}(?:-\d+)?|\d{1,4}))+\b/gi,
 ]
 
 let idCounter = 0

@@ -22,7 +22,11 @@ export default function Header() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-xs text-th3 hidden sm:block">Veritext Legal Solutions</span>
+          <img
+            src="/veritext-logo.png"
+            alt="Veritext Legal Solutions"
+            className="h-8 w-auto hidden sm:block dark:brightness-0 dark:invert"
+          />
           <button onClick={() => setDark(!dark)}
                   className="p-2 rounded-lg transition-colors hover:opacity-80"
                   style={{ color: 'var(--text-3)' }}>

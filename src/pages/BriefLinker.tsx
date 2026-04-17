@@ -24,12 +24,14 @@ export default function BriefLinker() {
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Guess exhibit label from filename: "Exhibit_A.pdf" -> "Exhibit A", "ExA.pdf" -> "Exhibit A"
+  // Guess exhibit label from filename: "Exhibit_A.pdf" -> "Exhibit A",
+  // "attachment-5.pdf" -> "Attachment 5", "Att_B.pdf" -> "Attachment B"
   const guessLabel = (name: string): string => {
-    // Try patterns like "Exhibit A", "Exhibit_A", "Ex-A", "Exhibit 1"
-    const match = name.match(/(?:exhibit|ex)[_\-\s]*([A-Z]{1,3}|\d{1,4})/i)
-    if (match) return `Exhibit ${match[1].toUpperCase()}`
-    // Fallback to filename without extension
+    const att = name.match(/(?:attachment|att)[_\-\s]*([A-Z]{1,3}|\d{1,4})/i)
+    if (att) return `Attachment ${att[1].toUpperCase()}`
+    const ex = name.match(/(?:exhibit|exh|ex)[_\-\s]*([A-Z]{1,3}|\d{1,4})/i)
+    if (ex) return `Exhibit ${ex[1].toUpperCase()}`
+    // Fallback: sequential letter label
     return `Exhibit ${String.fromCharCode(65 + exhibits.length)}`
   }
 
@@ -76,8 +78,8 @@ export default function BriefLinker() {
       // Step 3: Auto-map citations to exhibits
       const labelMap = new Map<string, string>()
       for (const ex of exhibits) {
-        // Extract the label identifier: "Exhibit A" -> "A", "Exhibit 1" -> "1"
-        const match = ex.label.match(/(?:exhibit|ex)\s*([A-Z]{1,3}(?:-\d+)?|\d{1,4})/i)
+        // Extract the label identifier: "Exhibit A" -> "A", "Attachment 1" -> "1"
+        const match = ex.label.match(/(?:exhibit|exh|ex|attachment|att)\s*([A-Z]{1,3}(?:-\d+)?|\d{1,4})/i)
         if (match) {
           labelMap.set(normalizeLabel(match[1]), ex.id)
         }

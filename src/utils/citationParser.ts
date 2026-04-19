@@ -25,6 +25,13 @@ const CITATION_PATTERNS = [
   /\bAttachments\s+([A-Z]{1,3}(?:-\d+)?|\d{1,4})(?:\s*(?:,|and|&)\s+([A-Z]{1,3}(?:-\d+)?|\d{1,4}))+\b/gi,
 ]
 
+/**
+ * Pin-cite trailer: `at 12`, `at p. 3`, `at pp. 10-12`, `at page 5`, `, at 14`.
+ * Captures the first page number only. Bates strings ("at VTX-000342") don't
+ * match because the lookahead requires a leading digit.
+ */
+const PIN_CITE_PATTERN = /^\s*[,;]?\s*at\s+(?:pp?\.?\s*|pages?\s+)?(\d{1,4})(?:[-\u2013]\d{1,4})?\b/i
+
 let idCounter = 0
 
 function makeId(): string {
@@ -34,6 +41,11 @@ function makeId(): string {
 /** Reset ID counter (useful for tests) */
 export function resetIdCounter(): void {
   idCounter = 0
+}
+
+/** Generate a stable ID for a citation added manually from the preview UI. */
+export function makeManualCitationId(): string {
+  return `cit-manual-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
 }
 
 /** Normalize an exhibit label for matching: uppercase, trim whitespace */
@@ -75,6 +87,7 @@ export function parseCitations(pages: PageText[]): BriefParseResult {
         startIndex,
         endIndex,
         pageNumber,
+        pinCitePage: extractPinCite(fullText, endIndex),
       })
 
       // For compound matches (Exhibits A, B, and C), also capture secondary labels
@@ -105,12 +118,36 @@ export function parseCitations(pages: PageText[]): BriefParseResult {
   return { pages, citations, fullText }
 }
 
+/** Look at the text immediately after a citation for a pin-cite page number. */
+export function extractPinCite(fullText: string, endIndex: number): number | undefined {
+  const lookahead = fullText.slice(endIndex, Math.min(fullText.length, endIndex + 40))
+  const m = lookahead.match(PIN_CITE_PATTERN)
+  if (!m) return undefined
+  const page = parseInt(m[1], 10)
+  return Number.isFinite(page) && page > 0 ? page : undefined
+}
+
 /** Find the page number for a given character offset */
 function getPageForOffset(pages: PageText[], offset: number): number {
   for (let i = pages.length - 1; i >= 0; i--) {
     if (offset >= pages[i].startOffset) return pages[i].pageNumber
   }
   return 1
+}
+
+/** Page number helper exposed for callers that need it (e.g. manually-added citations). */
+export function pageNumberForOffset(pages: PageText[], offset: number): number {
+  return getPageForOffset(pages, offset)
+}
+
+/**
+ * Heuristic: a brief with almost no extracted text per page is likely a
+ * Print-to-PDF flattened file or a scanned image without an OCR layer.
+ */
+export function isLikelyFlattened(pages: PageText[]): boolean {
+  if (pages.length === 0) return true
+  const totalChars = pages.reduce((sum, p) => sum + p.text.trim().length, 0)
+  return totalChars / pages.length < 50
 }
 
 /**

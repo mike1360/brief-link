@@ -5,6 +5,8 @@ export interface ExhibitFile {
   file: File
   url: string            // Object URL for preview/download
   pageCount?: number
+  /** Sealed exhibit — cite is highlighted but no link is emitted and the file is not bundled */
+  sealed?: boolean
 }
 
 /** A text item with its position on the PDF page */
@@ -26,6 +28,10 @@ export interface Citation {
   endIndex: number
   pageNumber: number     // PDF page where citation appears
   exhibitId?: string     // Linked exhibit ID (if mapped)
+  /** Page within the exhibit to deep-link to (1-indexed), e.g. "Ex. B at 12" -> 12 */
+  pinCitePage?: number
+  /** True if the user added this citation from the preview (vs. detected by parser) */
+  manual?: boolean
 }
 
 /** Extracted text from a single PDF page */
@@ -41,6 +47,13 @@ export interface BriefParseResult {
   pages: PageText[]
   citations: Citation[]
   fullText: string
+}
+
+/** Result of verifying that detected citations still appear in a generated PDF's brief pages */
+export interface PreservationReport {
+  preserved: boolean
+  totalChecked: number
+  missing: { id: string; text: string; pageNumber: number }[]
 }
 
 /** Processing status for the workflow */

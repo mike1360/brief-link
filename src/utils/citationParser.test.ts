@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { parseCitations, normalizeLabel, autoMapCitations, resetIdCounter } from './citationParser'
+import {
+  parseCitations,
+  normalizeLabel,
+  autoMapCitations,
+  resetIdCounter,
+  extractPinCite,
+  isLikelyFlattened,
+} from './citationParser'
 import type { PageText } from './types'
 
 beforeEach(() => {
@@ -106,6 +113,72 @@ describe('parseCitations', () => {
       expect(uniqueLabels).toContain(label)
     }
     expect(result.citations.length).toBeGreaterThanOrEqual(14)
+  })
+})
+
+describe('extractPinCite', () => {
+  it('captures "at 12"', () => {
+    expect(extractPinCite('Ex. A at 12.', 5)).toBe(12)
+  })
+
+  it('captures "at p. 3"', () => {
+    expect(extractPinCite('Ex. B at p. 3 shows', 5)).toBe(3)
+  })
+
+  it('captures "at pp. 10-12"', () => {
+    expect(extractPinCite('Ex. C at pp. 10-12.', 5)).toBe(10)
+  })
+
+  it('captures ", at 14"', () => {
+    expect(extractPinCite('Ex. K, at 14 clearly', 5)).toBe(14)
+  })
+
+  it('captures "at page 5"', () => {
+    expect(extractPinCite('Ex. D at page 5 of', 5)).toBe(5)
+  })
+
+  it('does not match Bates refs ("at VTX-000342")', () => {
+    expect(extractPinCite('Ex. C at VTX-000342', 5)).toBeUndefined()
+  })
+
+  it('returns undefined when no pin-cite follows', () => {
+    expect(extractPinCite('Ex. A and also Ex. B', 5)).toBeUndefined()
+  })
+
+  it('integrates with parseCitations', () => {
+    const result = parseCitations([
+      { pageNumber: 1, text: 'See Ex. A at 12-14 and Exhibit B at page 3.', startOffset: 0, items: [] },
+    ])
+    const a = result.citations.find(c => c.normalizedLabel === 'A')
+    const b = result.citations.find(c => c.normalizedLabel === 'B')
+    expect(a?.pinCitePage).toBe(12)
+    expect(b?.pinCitePage).toBe(3)
+  })
+})
+
+describe('isLikelyFlattened', () => {
+  it('flags empty pages', () => {
+    expect(isLikelyFlattened([])).toBe(true)
+  })
+
+  it('flags near-empty pages (likely image-only scan)', () => {
+    const pages: PageText[] = [
+      { pageNumber: 1, text: '  ', startOffset: 0, items: [] },
+      { pageNumber: 2, text: '  1  ', startOffset: 2, items: [] },
+    ]
+    expect(isLikelyFlattened(pages)).toBe(true)
+  })
+
+  it('does not flag pages with normal brief content', () => {
+    const pages: PageText[] = [
+      {
+        pageNumber: 1,
+        text: 'A'.repeat(200),
+        startOffset: 0,
+        items: [],
+      },
+    ]
+    expect(isLikelyFlattened(pages)).toBe(false)
   })
 })
 

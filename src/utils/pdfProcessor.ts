@@ -1,6 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import { PDFDocument, rgb, StandardFonts, PDFPage, PDFName, PDFArray, PDFDict, PDFString, PDFNumber } from 'pdf-lib'
-import type { PageText, TextItem, Citation, ExhibitFile } from './types'
+import type { PageText, TextItem, Citation, ExhibitFile, PreservationReport } from './types'
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -201,12 +201,15 @@ export async function buildLinkedPdf(
   const pdfDoc = await PDFDocument.load(originalBytes)
   const briefPageCount = pdfDoc.getPageCount()
 
-  // Determine which exhibits are actually linked by citations
+  // Determine which exhibits are actually linked by citations.
+  // Sealed exhibits are deliberately excluded from the bundle — the citation
+  // is still highlighted in output but no link annotation is emitted and the
+  // exhibit file is not appended (NY ComDiv / sealed-filing compliance).
   const linkedExhibitIds = new Set(
     citations.filter(c => c.exhibitId).map(c => c.exhibitId!)
   )
   const linkedExhibits = [...exhibits.values()]
-    .filter(ex => linkedExhibitIds.has(ex.id))
+    .filter(ex => linkedExhibitIds.has(ex.id) && !ex.sealed)
     .sort((a, b) => a.label.localeCompare(b.label))
 
   // ── Step 1: Load all exhibit PDFs and figure out page numbers ──
@@ -399,9 +402,8 @@ export async function buildLinkedPdf(
 
   for (const cit of citations) {
     if (!cit.exhibitId) continue
-    const targetPageIdx = exhibitPageMap.get(cit.exhibitId)
-    if (targetPageIdx === undefined) continue
-    if (targetPageIdx >= allPages.length) continue
+    const exhibit = exhibits.get(cit.exhibitId)
+    if (!exhibit) continue
 
     const pageIdx = cit.pageNumber - 1
     if (pageIdx >= briefPages.length) continue
@@ -410,9 +412,6 @@ export async function buildLinkedPdf(
     const pageData = pages.find(p => p.pageNumber === cit.pageNumber)
     if (!pageData) continue
 
-    const targetPageRef = allPages[targetPageIdx].ref
-
-    // Try to find exact position from text items
     const occurrenceIdx = occurrenceByCitation.get(cit.id) ?? 0
     const rect = findCitationRect(cit, pageData, occurrenceIdx)
     const { height: pageHeight } = briefPage.getSize()
@@ -420,7 +419,6 @@ export async function buildLinkedPdf(
     let linkRect: [number, number, number, number]
 
     if (rect) {
-      // Use actual text position
       linkRect = [
         rect.x,
         rect.y,
@@ -428,7 +426,6 @@ export async function buildLinkedPdf(
         rect.y + rect.height,
       ]
     } else {
-      // Fallback: estimate position
       const localOffset = cit.startIndex - pageData.startOffset
       const fraction = pageData.text.length > 0 ? localOffset / pageData.text.length : 0
       const estY = pageHeight - (fraction * (pageHeight - 100)) - 50
@@ -436,7 +433,36 @@ export async function buildLinkedPdf(
       linkRect = [70, estY - 8, 70 + estWidth, estY + 8]
     }
 
-    // Create link annotation with GoTo destination (internal page link)
+    // Sealed exhibit: highlight the citation but emit no outbound link.
+    if (exhibit.sealed) {
+      if (rect) {
+        briefPage.drawRectangle({
+          x: rect.x,
+          y: rect.y - 1,
+          width: rect.width,
+          height: 0.75,
+          color: rgb(0.85, 0.47, 0.02), // warning / amber to signal sealed
+          opacity: 0.7,
+        })
+      }
+      continue
+    }
+
+    const exhibitStart = exhibitPageMap.get(cit.exhibitId)
+    if (exhibitStart === undefined) continue
+
+    // Pin-cite deep link: `Ex. B at 12` → page 12 inside exhibit B.
+    // Clamped so a bad page ref can't point past the exhibit.
+    const exhibitPageCount = exhibitEntries.find(e => e.exhibit.id === cit.exhibitId)?.pageCount ?? 1
+    let targetPageIdx = exhibitStart
+    if (cit.pinCitePage && cit.pinCitePage > 1) {
+      const offset = Math.min(cit.pinCitePage - 1, exhibitPageCount - 1)
+      targetPageIdx = exhibitStart + offset
+    }
+    if (targetPageIdx >= allPages.length) continue
+
+    const targetPageRef = allPages[targetPageIdx].ref
+
     const linkDict = pdfDoc.context.obj({
       Type: 'Annot',
       Subtype: 'Link',
@@ -448,7 +474,6 @@ export async function buildLinkedPdf(
     const linkRef = pdfDoc.context.register(linkDict)
     briefPage.node.addAnnot(linkRef)
 
-    // Draw a subtle blue underline at the citation location
     if (rect) {
       briefPage.drawRectangle({
         x: rect.x,
@@ -528,4 +553,49 @@ export async function buildLinkedPdf(
   }
 
   return pdfDoc.save()
+}
+
+/**
+ * Verify that every detected citation's text still appears in the generated
+ * PDF's brief pages. Required by FR-8: the output must preserve the original
+ * citation text string — hyperlinks are an overlay, not a replacement.
+ *
+ * Loads the output bytes back through pdf.js, extracts text from only the
+ * first `briefPageCount` pages (exhibit pages are ignored), normalizes
+ * whitespace, and verifies each citation substring is present.
+ */
+export async function verifyCitationPreservation(
+  pdfBytes: Uint8Array,
+  citations: Citation[],
+  briefPageCount: number,
+): Promise<PreservationReport> {
+  // pdf.js consumes the buffer, so pass a copy to keep pdfBytes usable afterward.
+  const buf = pdfBytes.slice().buffer
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+  const limit = Math.min(briefPageCount, pdf.numPages)
+
+  let extracted = ''
+  for (let i = 1; i <= limit; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    for (const item of content.items as any[]) {
+      if (item.str) extracted += item.str + ' '
+    }
+  }
+
+  const normalize = (s: string) => s.replace(/\s+/g, ' ').toLowerCase()
+  const haystack = normalize(extracted)
+
+  const missing: PreservationReport['missing'] = []
+  for (const cit of citations) {
+    if (!haystack.includes(normalize(cit.text))) {
+      missing.push({ id: cit.id, text: cit.text, pageNumber: cit.pageNumber })
+    }
+  }
+
+  return {
+    preserved: missing.length === 0,
+    totalChecked: citations.length,
+    missing,
+  }
 }

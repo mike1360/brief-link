@@ -125,4 +125,12 @@
     background-color: rgba(217, 119, 6, 0.12);
     border-bottom-color: var(--warning);
   }
+  .citation-sealed {
+    background-color: rgba(217, 119, 6, 0.08);
+    border-bottom-color: var(--warning);
+    border-bottom-style: dashed;
+  }
+  .citation-sealed:hover {
+    background-color: rgba(217, 119, 6, 0.18);
+  }
 }

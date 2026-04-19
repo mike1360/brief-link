@@ -1,4 +1,4 @@
-import { Plus, FileText, X, Tag } from 'lucide-react'
+import { Plus, FileText, X, Tag, Lock, Unlock } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import type { ExhibitFile } from '../utils/types'
 
@@ -7,9 +7,10 @@ interface Props {
   onAdd: (files: FileList) => void
   onRemove: (id: string) => void
   onLabelChange: (id: string, label: string) => void
+  onSealedToggle: (id: string, sealed: boolean) => void
 }
 
-export default function ExhibitUpload({ exhibits, onAdd, onRemove, onLabelChange }: Props) {
+export default function ExhibitUpload({ exhibits, onAdd, onRemove, onLabelChange, onSealedToggle }: Props) {
   const [dragOver, setDragOver] = useState(false)
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -43,6 +44,14 @@ export default function ExhibitUpload({ exhibits, onAdd, onRemove, onLabelChange
                 placeholder="Exhibit A"
               />
               <span className="text-[10px] text-th3 shrink-0 max-w-[100px] truncate">{ex.file.name}</span>
+              <button
+                onClick={() => onSealedToggle(ex.id, !ex.sealed)}
+                className="p-1 rounded hover:opacity-70 shrink-0"
+                title={ex.sealed ? 'Sealed — no link will be emitted' : 'Not sealed — mark as sealed to skip linking'}
+                style={{ color: ex.sealed ? 'var(--warning)' : 'var(--text-3)' }}
+              >
+                {ex.sealed ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
               <button onClick={() => onRemove(ex.id)} className="p-1 rounded hover:opacity-70 text-th3 shrink-0">
                 <X size={14} />
               </button>

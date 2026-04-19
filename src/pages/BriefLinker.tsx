@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { RotateCcw, Wand2, ArrowRight, Loader2, AlertTriangle } from 'lucide-react'
+import { useState, useCallback, useRef } from 'react'
+import { RotateCcw, Wand2, ArrowRight, Loader2, AlertTriangle, Save, Upload, ScanText } from 'lucide-react'
 import Header from '../components/Header'
 import StepIndicator from '../components/StepIndicator'
 import BriefUpload from '../components/BriefUpload'
@@ -17,6 +17,9 @@ import {
   pageNumberForOffset,
   makeManualCitationId,
 } from '../utils/citationParser'
+import { buildSession, downloadSession, readSessionFile, restoreSession, type Session } from '../utils/session'
+import { docxToPdf, isDocx } from '../utils/docxToPdf'
+import { ocrPdf } from '../utils/ocr'
 import type { WorkflowStep, ExhibitFile, Citation, PageText, PreservationReport } from '../utils/types'
 
 let exhibitIdCounter = 0
@@ -33,6 +36,11 @@ export default function BriefLinker() {
   const [error, setError] = useState<string | null>(null)
   const [flattenedWarning, setFlattenedWarning] = useState<string | null>(null)
   const [preservation, setPreservation] = useState<PreservationReport | null>(null)
+  const [pendingSession, setPendingSession] = useState<Session | null>(null)
+  const [sessionMessage, setSessionMessage] = useState<string | null>(null)
+  const [convertingBrief, setConvertingBrief] = useState(false)
+  const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number; phase: string } | null>(null)
+  const sessionInputRef = useRef<HTMLInputElement | null>(null)
 
   // Guess exhibit label from filename: "Exhibit_A.pdf" -> "Exhibit A",
   // "attachment-5.pdf" -> "Attachment 5", "Att_B.pdf" -> "Attachment B"
@@ -90,6 +98,21 @@ export default function BriefLinker() {
         )
       }
 
+      // Resume an in-progress session instead of re-parsing if one was loaded.
+      if (pendingSession) {
+        const { exhibits: restoredExhibits, citations: restoredCitations, missing } =
+          restoreSession(pendingSession, exhibits)
+        setExhibits(restoredExhibits)
+        setCitations(restoredCitations)
+        const msg = missing.length > 0
+          ? `Resumed session. ${missing.length} exhibit file${missing.length !== 1 ? 's' : ''} not found: ${missing.join(', ')}. Their citations will be unlinked.`
+          : `Resumed session from ${new Date(pendingSession.savedAt).toLocaleString()}.`
+        setSessionMessage(msg)
+        setPendingSession(null)
+        setStep('review')
+        return
+      }
+
       const result = parseCitations(extractedPages)
 
       const labelMap = new Map<string, string>()
@@ -109,12 +132,93 @@ export default function BriefLinker() {
     } finally {
       setProcessing(false)
     }
+  }, [briefFile, exhibits, pendingSession])
+
+  /** Accept a PDF directly or convert a DOCX to PDF before storing. */
+  const handleBriefSelect = useCallback(async (file: File) => {
+    setError(null)
+    if (isDocx(file)) {
+      setConvertingBrief(true)
+      try {
+        const converted = await docxToPdf(file)
+        setBriefFile(converted)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to convert DOCX to PDF')
+      } finally {
+        setConvertingBrief(false)
+      }
+    } else {
+      setBriefFile(file)
+    }
+  }, [])
+
+  const handleSaveSession = useCallback(() => {
+    if (!briefFile) return
+    const session = buildSession({
+      briefFileName: briefFile.name,
+      exhibits,
+      citations,
+    })
+    downloadSession(session)
+  }, [briefFile, exhibits, citations])
+
+  /** OCR the current brief and re-run citation detection using OCR'd text. */
+  const handleRunOcr = useCallback(async () => {
+    if (!briefFile) return
+    setError(null)
+    setOcrProgress({ current: 0, total: 0, phase: 'Starting…' })
+
+    try {
+      const ocrPages = await ocrPdf(briefFile, (current, total, phase) => {
+        setOcrProgress({ current, total, phase })
+      })
+      setPages(ocrPages)
+      const text = ocrPages.map(p => p.text).join('')
+      setFullText(text)
+
+      const result = parseCitations(ocrPages)
+      const labelMap = new Map<string, string>()
+      for (const ex of exhibits) {
+        const match = ex.label.match(/(?:exhibit|exh|ex|attachment|att)\s*([A-Z]{1,3}(?:-\d+)?|\d{1,4})/i)
+        if (match) labelMap.set(normalizeLabel(match[1]), ex.id)
+      }
+      autoMapCitations(result.citations, labelMap)
+      setCitations(result.citations)
+      setFlattenedWarning(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'OCR failed')
+    } finally {
+      setOcrProgress(null)
+    }
   }, [briefFile, exhibits])
+
+  const handleLoadSessionFile = useCallback(async (file: File) => {
+    try {
+      const session = await readSessionFile(file)
+      setPendingSession(session)
+      setSessionMessage(
+        `Session loaded from "${file.name}" — upload ${session.briefFileName} and ${session.exhibits.length} exhibit file${session.exhibits.length !== 1 ? 's' : ''}, then click Scan to resume.`,
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load session file')
+    }
+  }, [])
 
   const handleMapCitation = useCallback((citationId: string, exhibitId: string | undefined) => {
     setCitations(prev => prev.map(c =>
       c.id === citationId ? { ...c, exhibitId } : c
     ))
+  }, [])
+
+  /** Apply a citation's exhibit mapping to every other citation that shares its normalized label. */
+  const handleMapAllLike = useCallback((citationId: string, exhibitId: string | undefined) => {
+    setCitations(prev => {
+      const target = prev.find(c => c.id === citationId)
+      if (!target) return prev
+      return prev.map(c =>
+        c.normalizedLabel === target.normalizedLabel ? { ...c, exhibitId } : c
+      )
+    })
   }, [])
 
   const handlePinCiteChange = useCallback((citationId: string, pinCitePage: number | undefined) => {
@@ -189,6 +293,8 @@ export default function BriefLinker() {
     setError(null)
     setFlattenedWarning(null)
     setPreservation(null)
+    setPendingSession(null)
+    setSessionMessage(null)
     setStep('upload')
   }, [linkedPdfUrl, exhibits])
 
@@ -211,13 +317,44 @@ export default function BriefLinker() {
           </div>
         )}
 
+        {sessionMessage && step !== 'download' && (
+          <div className="card p-3 mb-4 border-l-4 flex items-start gap-3"
+               style={{ borderLeftColor: 'var(--accent)' }}>
+            <Upload size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
+            <p className="text-xs text-th2 flex-1">{sessionMessage}</p>
+            <button onClick={() => setSessionMessage(null)} className="text-th3 hover:opacity-70 text-xs">
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {flattenedWarning && step !== 'upload' && (
           <div className="card p-4 mb-4 border-l-4 flex items-start gap-3"
                style={{ borderLeftColor: 'var(--warning)' }}>
             <AlertTriangle size={18} className="shrink-0 mt-0.5" style={{ color: 'var(--warning)' }} />
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium text-th">Low or missing text layer detected</p>
               <p className="text-xs text-th2 mt-1">{flattenedWarning}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={handleRunOcr}
+                  disabled={!!ocrProgress}
+                  className="btn-primary text-xs py-1 px-2"
+                >
+                  {ocrProgress ? <Loader2 size={12} className="animate-spin" /> : <ScanText size={12} />}
+                  {ocrProgress ? ocrProgress.phase : 'Run OCR'}
+                </button>
+                {ocrProgress && ocrProgress.total > 0 && (
+                  <span className="text-[11px] text-th3">
+                    {ocrProgress.current}/{ocrProgress.total} pages
+                  </span>
+                )}
+              </div>
+              {ocrProgress && (
+                <p className="text-[10px] text-th3 mt-1 italic">
+                  First run downloads the OCR engine (~10 MB). Subsequent runs are cached by the browser.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -225,12 +362,33 @@ export default function BriefLinker() {
         {/* STEP 1: Upload */}
         {step === 'upload' && (
           <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-th mb-1">Upload Your Brief & Exhibits</h2>
-              <p className="text-sm text-th3">
-                Upload the brief PDF and the exhibit files. Brief Link will scan for exhibit citations
-                and create hyperlinks automatically.
-              </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-th mb-1">Upload Your Brief & Exhibits</h2>
+                <p className="text-sm text-th3">
+                  Upload the brief PDF and the exhibit files. Brief Link will scan for exhibit citations
+                  and create hyperlinks automatically.
+                </p>
+              </div>
+              <button
+                onClick={() => sessionInputRef.current?.click()}
+                className="btn-secondary text-xs shrink-0"
+                title="Load a previously-saved session (.json) to resume work"
+              >
+                <Upload size={14} />
+                Load Session
+              </button>
+              <input
+                ref={sessionInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) handleLoadSessionFile(f)
+                  e.target.value = '' // allow re-selecting the same file
+                }}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -238,7 +396,8 @@ export default function BriefLinker() {
                 <label className="text-xs font-medium text-th2 mb-2 block">Brief Document</label>
                 <BriefUpload
                   file={briefFile}
-                  onFileSelect={setBriefFile}
+                  busy={convertingBrief}
+                  onFileSelect={handleBriefSelect}
                   onClear={() => setBriefFile(null)}
                 />
               </div>
@@ -293,6 +452,11 @@ export default function BriefLinker() {
                   <RotateCcw size={14} />
                   Start Over
                 </button>
+                <button onClick={handleSaveSession} className="btn-secondary"
+                        title="Download a JSON snapshot to resume this review later">
+                  <Save size={14} />
+                  Save Session
+                </button>
                 <button onClick={handleGenerateOutput} disabled={!canGenerate || processing} className="btn-primary">
                   {processing ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
                   Generate Linked Brief
@@ -306,6 +470,7 @@ export default function BriefLinker() {
                 exhibits={exhibits}
                 fullText={fullText}
                 onMapCitation={handleMapCitation}
+                onMapAllLike={handleMapAllLike}
                 onPinCiteChange={handlePinCiteChange}
                 onRemoveCitation={handleRemoveCitation}
               />
@@ -314,6 +479,7 @@ export default function BriefLinker() {
                 citations={citations}
                 exhibits={exhibits}
                 onMapCitation={handleMapCitation}
+                onMapAllLike={handleMapAllLike}
                 onPinCiteChange={handlePinCiteChange}
                 onRemoveCitation={handleRemoveCitation}
                 onAddCitation={handleAddCitation}

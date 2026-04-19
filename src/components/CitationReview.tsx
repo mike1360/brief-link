@@ -1,5 +1,5 @@
-import { Link, Unlink, ChevronDown, AlertCircle, CheckCircle2, Lock, Trash2, Pencil } from 'lucide-react'
-import { useState } from 'react'
+import { Link, Unlink, ChevronDown, AlertCircle, CheckCircle2, Lock, Trash2, Pencil, SkipForward, Copy } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import type { Citation, ExhibitFile } from '../utils/types'
 
 interface Props {
@@ -7,14 +7,42 @@ interface Props {
   exhibits: ExhibitFile[]
   fullText: string
   onMapCitation: (citationId: string, exhibitId: string | undefined) => void
+  onMapAllLike: (citationId: string, exhibitId: string | undefined) => void
   onPinCiteChange: (citationId: string, pinCitePage: number | undefined) => void
   onRemoveCitation: (citationId: string) => void
 }
 
 export default function CitationReview({
-  citations, exhibits, fullText, onMapCitation, onPinCiteChange, onRemoveCitation,
+  citations, exhibits, fullText, onMapCitation, onMapAllLike, onPinCiteChange, onRemoveCitation,
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const rowRefs = useRef(new Map<string, HTMLDivElement>())
+
+  /** Expand + scroll to the next unlinked citation after the current expansion. */
+  function jumpToNextUnlinked() {
+    const unlinkedIds = citations.filter(c => !c.exhibitId).map(c => c.id)
+    if (unlinkedIds.length === 0) return
+    const currentIdx = expandedId ? unlinkedIds.indexOf(expandedId) : -1
+    const nextId = unlinkedIds[(currentIdx + 1) % unlinkedIds.length]
+    setExpandedId(nextId)
+    // Scroll into view on next tick after the row renders expanded.
+    requestAnimationFrame(() => {
+      rowRefs.current.get(nextId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') return
+      if (e.key === 'j' || e.key === 'J') {
+        e.preventDefault()
+        jumpToNextUnlinked()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   const linked = citations.filter(c => c.exhibitId)
   const unlinked = citations.filter(c => !c.exhibitId)
@@ -31,6 +59,14 @@ export default function CitationReview({
         <StatCard label="Linked" value={linked.length} color="var(--success)" />
         <StatCard label="Unlinked" value={unlinked.length} color="var(--warning)" />
       </div>
+
+      {unlinked.length > 0 && (
+        <button onClick={jumpToNextUnlinked} className="btn-secondary w-full text-xs py-2">
+          <SkipForward size={12} />
+          Jump to next unlinked ({unlinked.length} remaining)
+          <span className="text-[10px] text-th3 ml-2">press J</span>
+        </button>
+      )}
 
       {sealedLinkedCount > 0 && (
         <div className="card p-3 text-[11px] text-th2 flex items-start gap-2 border-l-4"
@@ -57,9 +93,15 @@ export default function CitationReview({
                 citation={cit}
                 exhibits={exhibits}
                 fullText={fullText}
+                citations={citations}
                 expanded={expandedId === cit.id}
+                registerRef={(el) => {
+                  if (el) rowRefs.current.set(cit.id, el)
+                  else rowRefs.current.delete(cit.id)
+                }}
                 onToggle={() => setExpandedId(expandedId === cit.id ? null : cit.id)}
                 onMap={onMapCitation}
+                onMapAll={onMapAllLike}
                 onPinCite={onPinCiteChange}
                 onRemove={onRemoveCitation}
               />
@@ -82,9 +124,15 @@ export default function CitationReview({
                 citation={cit}
                 exhibits={exhibits}
                 fullText={fullText}
+                citations={citations}
                 expanded={expandedId === cit.id}
+                registerRef={(el) => {
+                  if (el) rowRefs.current.set(cit.id, el)
+                  else rowRefs.current.delete(cit.id)
+                }}
                 onToggle={() => setExpandedId(expandedId === cit.id ? null : cit.id)}
                 onMap={onMapCitation}
+                onMapAll={onMapAllLike}
                 onPinCite={onPinCiteChange}
                 onRemove={onRemoveCitation}
               />
@@ -97,14 +145,17 @@ export default function CitationReview({
 }
 
 function CitationRow({
-  citation, exhibits, fullText, expanded, onToggle, onMap, onPinCite, onRemove,
+  citation, exhibits, fullText, citations, expanded, registerRef, onToggle, onMap, onMapAll, onPinCite, onRemove,
 }: {
   citation: Citation
   exhibits: ExhibitFile[]
   fullText: string
+  citations: Citation[]
   expanded: boolean
+  registerRef: (el: HTMLDivElement | null) => void
   onToggle: () => void
   onMap: (citationId: string, exhibitId: string | undefined) => void
+  onMapAll: (citationId: string, exhibitId: string | undefined) => void
   onPinCite: (citationId: string, pinCitePage: number | undefined) => void
   onRemove: (citationId: string) => void
 }) {
@@ -116,8 +167,14 @@ function CitationRow({
   const citText = fullText.slice(citation.startIndex, citation.endIndex)
   const after = fullText.slice(citation.endIndex, contextEnd)
 
+  // How many other citations share this normalized label? Used to enable the
+  // "apply to all" bulk-action button in the expanded row.
+  const sameLabelCount = citations.filter(
+    c => c.id !== citation.id && c.normalizedLabel === citation.normalizedLabel,
+  ).length
+
   return (
-    <div className="rounded-lg border border-th2 overflow-hidden">
+    <div ref={registerRef} className="rounded-lg border border-th2 overflow-hidden">
       <button onClick={onToggle}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:opacity-90 transition-colors"
               style={{ backgroundColor: 'var(--bg-card2)' }}>
@@ -177,6 +234,17 @@ function CitationRow({
               ))}
             </select>
           </div>
+
+          {sameLabelCount > 0 && (
+            <button
+              onClick={() => onMapAll(citation.id, citation.exhibitId)}
+              className="btn-secondary text-[11px] py-1 px-2 w-full"
+              title={`Apply this citation's exhibit mapping to all ${sameLabelCount} other "${citation.normalizedLabel}" citations`}
+            >
+              <Copy size={11} />
+              Apply to all {sameLabelCount} other "{citation.normalizedLabel}" citation{sameLabelCount !== 1 ? 's' : ''}
+            </button>
+          )}
 
           {/* Pin-cite page */}
           <div className="flex items-center gap-2">

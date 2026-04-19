@@ -7,6 +7,7 @@ interface Props {
   citations: Citation[]
   exhibits: ExhibitFile[]
   onMapCitation: (citationId: string, exhibitId: string | undefined) => void
+  onMapAllLike: (citationId: string, exhibitId: string | undefined) => void
   onPinCiteChange: (citationId: string, pinCitePage: number | undefined) => void
   onRemoveCitation: (citationId: string) => void
   onAddCitation: (input: { startIndex: number; endIndex: number; text: string; exhibitId?: string }) => void
@@ -33,6 +34,7 @@ export default function BriefPreview({
   citations,
   exhibits,
   onMapCitation,
+  onMapAllLike,
   onPinCiteChange,
   onRemoveCitation,
   onAddCitation,
@@ -288,7 +290,9 @@ export default function BriefPreview({
                 citation={activeEdit}
                 exhibits={exhibits}
                 exhibit={activeEdit.exhibitId ? exhibitMap.get(activeEdit.exhibitId) : undefined}
+                sameLabelCount={citations.filter(c => c.id !== activeEdit.id && c.normalizedLabel === activeEdit.normalizedLabel).length}
                 onMap={(exhibitId) => onMapCitation(activeEdit.id, exhibitId)}
+                onMapAll={(exhibitId) => onMapAllLike(activeEdit.id, exhibitId)}
                 onPinCite={(page) => onPinCiteChange(activeEdit.id, page)}
                 onRemove={() => {
                   onRemoveCitation(activeEdit.id)
@@ -333,12 +337,14 @@ export default function BriefPreview({
 }
 
 function EditControls({
-  citation, exhibits, exhibit, onMap, onPinCite, onRemove, onClose,
+  citation, exhibits, exhibit, sameLabelCount, onMap, onMapAll, onPinCite, onRemove, onClose,
 }: {
   citation: Citation
   exhibits: ExhibitFile[]
   exhibit: ExhibitFile | undefined
+  sameLabelCount: number
   onMap: (exhibitId: string | undefined) => void
+  onMapAll: (exhibitId: string | undefined) => void
   onPinCite: (page: number | undefined) => void
   onRemove: () => void
   onClose: () => void
@@ -369,6 +375,14 @@ function EditControls({
           <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: 'var(--warning)' }}>
             <Lock size={10} /> Sealed — cite highlighted but no link emitted
           </p>
+        )}
+        {sameLabelCount > 0 && (
+          <button
+            onClick={() => onMapAll(citation.exhibitId)}
+            className="btn-secondary text-[10px] py-1 px-2 mt-2 w-full"
+          >
+            Apply to all {sameLabelCount} other "{citation.normalizedLabel}" citation{sameLabelCount !== 1 ? 's' : ''}
+          </button>
         )}
       </div>
       <div>

@@ -569,26 +569,24 @@ export async function verifyCitationPreservation(
   citations: Citation[],
   briefPageCount: number,
 ): Promise<PreservationReport> {
-  // pdf.js consumes the buffer, so pass a copy to keep pdfBytes usable afterward.
-  const buf = pdfBytes.slice().buffer
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise
-  const limit = Math.min(briefPageCount, pdf.numPages)
+  // Wrap the output bytes in a File so we can reuse the exact extraction
+  // path that captured the citations in the first place. Using a different
+  // join/normalize strategy here was producing false-positive "missing"
+  // reports (especially for DOCX-converted briefs).
+  const copy = new Uint8Array(pdfBytes.length)
+  copy.set(pdfBytes)
+  const file = new File([copy], 'output.pdf', { type: 'application/pdf' })
 
-  let extracted = ''
-  for (let i = 1; i <= limit; i++) {
-    const page = await pdf.getPage(i)
-    const content = await page.getTextContent()
-    for (const item of content.items as any[]) {
-      if (item.str) extracted += item.str + ' '
-    }
-  }
-
-  const normalize = (s: string) => s.replace(/\s+/g, ' ').toLowerCase()
-  const haystack = normalize(extracted)
+  const extractedPages = await extractTextFromPdf(file)
+  const briefText = extractedPages
+    .slice(0, briefPageCount)
+    .map(p => p.text)
+    .join('')
+    .toLowerCase()
 
   const missing: PreservationReport['missing'] = []
   for (const cit of citations) {
-    if (!haystack.includes(normalize(cit.text))) {
+    if (!briefText.includes(cit.text.toLowerCase())) {
       missing.push({ id: cit.id, text: cit.text, pageNumber: cit.pageNumber })
     }
   }
